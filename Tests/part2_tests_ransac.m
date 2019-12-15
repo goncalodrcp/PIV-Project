@@ -1,3 +1,5 @@
+clear
+
 load calib_asus.mat
 
 d1=dir('Datasets/imgs/*.mat');
@@ -5,11 +7,6 @@ d2=dir('Datasets/imgs/*.jpg');
 for i=1:length(d1),
     data(i).depth = ['Datasets/imgs/' d1(i).name];
     data(i).rgb = ['Datasets/imgs/' d2(i).name];
-    %im1=imread(['depth/' d1(i).name]);
-    %im2=imread(['rgb/' d2(i).name]);
-    %depth_array=double(im1)/5;
-    %save(['board1/' sprintf('img_%10.10d.mat',i)],'depth_array');
-    %imwrite(im2,['f/' sprintf('img_%10.10d.png',i)]);
 end
  
 clear d1 d2 i
@@ -19,8 +16,10 @@ K_depth=Depth_cam.K;
  K_rgb = RGB_cam.K;
  Rdtrgb = R_d_to_rgb;
  Tdtrgb = T_d_to_rgb;
+ 
+ %change this to the right directory
+ run('F:\Users\User\Desktop\IST\PIV\sift\vlfeat-0.9.21\toolbox\vl_setup');
 
-    %change this to the right directory
     %% Variables initialization
 
     for i = 1 : length(image_names)
@@ -34,17 +33,21 @@ K_depth=Depth_cam.K;
         depth = depth.depth_array;
         %stores the depth_array [depth for each (x,y) pair].
         im_size = size(im);
+        
+        depth(find(depth>3*mean(depth)))=0;
+        
+        depth_inds = find(depth~=0);
 
         image_struct(i) = struct('original', im, 'gray', im_gray, 'depth_array', depth, 'size', [im_size(1) im_size(2)]);
         %structure containing info about each image.
-        xyz = get_xyz_asus(depth(:), image_struct(i).size, 1:length(depth), K_depth, 1, 0);
+        xyz = get_xyz_asus(depth(:), image_struct(i).size, depth_inds, K_depth, 1, 0);
         rgbd = get_rgbd(xyz, im, Rdtrgb, Tdtrgb, K_rgb);
         cl = reshape(rgbd,480*640,3);
-        cloud_struct(i) = struct('point_cloud', pointCloud(xyz, 'Color', reshape(im, im_size(1)*im_size(2), 3)), 'xyz', xyz, 'rgb', rgbd, 'cl', cl);
+        cloud_struct(i) = struct('point_cloud', pointCloud(xyz, 'Color', reshape(rgbd, im_size(1)*im_size(2), 3)), 'xyz', xyz, 'rgb', rgbd, 'cl', cl);
         %structure containing info about each Point Cloud and 3D point.
     end
 
-    clearvars im_name depth_name im im_gray depth im_size xyz;
+    %clearvars im_name depth_name im im_gray depth im_size xyz;
 
 
     %Até aqui temos 3 vetores de estruturas, 1 com imagens e outro com point clouds.
@@ -176,7 +179,7 @@ K_depth=Depth_cam.K;
             error = xyz_hat - cloud_struct(i+1).xyz';
             error = sum(error.^2, 1);
             
-            ok{r} = error < 0.02;
+            ok{r} = error < 0.01;
             score(r) = sum(ok{r});
         end
         
@@ -192,7 +195,7 @@ K_depth=Depth_cam.K;
         error = sum(error.^2, 1);
         
         %Indices of the inliers are those that have error smaller than 20cm
-        inlier_inds=find(error<0.02);
+        inlier_inds=find(error<0.01);
         
         centroid(:,1) = mean(cloud_struct(i).xyz(inlier_inds,:))';
         centroid(:,2) = mean(cloud_struct(i+1).xyz(inlier_inds,:))';
@@ -236,10 +239,12 @@ K_depth=Depth_cam.K;
     %Computation of pcloud, a matrix containg, for each line, the
     %information about the x, y and z coordinates and the rgb colors for
     %every given point in the image
-    for i = 1 : length(cloud_struct(1,:))
+    for i = 1 : length(cloud_struct(1,:))-1
         xyz = cloud_struct(i).point_cloud.Location;
         color = cloud_struct(i).point_cloud.Color;
         %pcloud(:,:,i) = [xyz color];
-        pc=pointCloud(xyz, 'Color', cloud_struct(i).point_cloud.Color);
+        pc=pointCloud(xyz);%, 'Color', cloud_struct(i).point_cloud.Color);
+        figure(i);
+        pcshow(pc)
     end
-    pcshow(pc);
+    
