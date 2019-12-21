@@ -4,14 +4,7 @@ run('/Users/goncalopereira/Documents/MATLAB/vlfeat-0.9.21/toolbox/vl_setup')
 
 cam_params = load('cam_params.mat');
 
-%imglistrgb = {'labpiv/rgb_image_1.png','labpiv/rgb_image_2.png','labpiv/rgb_image_3.png','labpiv/rgb_image_4.png','labpiv/rgb_image_5.png','labpiv/rgb_image_6.png'};
-%imglistdepth = {'labpiv/depth_1.mat','labpiv/depth_2.mat','labpiv/depth_3.mat','labpiv/depth_4.mat','labpiv/depth_5.mat','labpiv/depth_6.mat'};
-
-%imglistrgb = {'Datasets/board1/rgb_0000.jpg','Datasets/board1/rgb_0001.jpg','Datasets/board1/rgb_0002.jpg','Datasets/board1/rgb_0003.jpg','Datasets/board1/rgb_0004.jpg','Datasets/board1/rgb_0005.jpg','Datasets/board1/rgb_0006.jpg','Datasets/board1/rgb_0007.jpg','Datasets/board1/rgb_0008.jpg','Datasets/board1/rgb_0009.jpg','Datasets/board1/rgb_0010.jpg','Datasets/board1/rgb_0011.jpg','Datasets/board1/rgb_0012.jpg','Datasets/board1/rgb_0013.jpg','Datasets/board1/rgb_0014.jpg'};
-%imglistdepth = {'Datasets/board1/depth_0000.mat','Datasets/board1/depth_0001.mat','Datasets/board1/depth_0002.mat','Datasets/board1/depth_0003.mat','Datasets/board1/depth_0004.mat','Datasets/board1/depth_0005.mat','Datasets/board1/depth_0006.mat','Datasets/board1/depth_0007.mat','Datasets/board1/depth_0008.mat','Datasets/board1/depth_0009.mat','Datasets/board1/depth_0010.mat','Datasets/board1/depth_0011.mat','Datasets/board1/depth_0012.mat','Datasets/board1/depth_0013.mat','Datasets/board1/depth_0014.mat'};
-
-%imglistrgb = {'Datasets/table/rgb_0000.jpg','Datasets/table/rgb_0001.jpg','Datasets/table/rgb_0002.jpg','Datasets/table/rgb_0003.jpg','Datasets/table/rgb_0004.jpg','Datasets/table/rgb_0005.jpg','Datasets/table/rgb_0006.jpg','Datasets/table/rgb_0007.jpg'};
-%imglistdepth = {'Datasets/table/depth_0000.mat','Datasets/table/depth_0001.mat','Datasets/table/depth_0002.mat','Datasets/table/depth_0003.mat','Datasets/table/depth_0004.mat','Datasets/table/depth_0005.mat','Datasets/table/depth_0006.mat','Datasets/table/depth_0007.mat'};
+leimgs;
 
 num_images=length(imglistrgb);
 
