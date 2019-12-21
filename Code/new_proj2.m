@@ -7,8 +7,8 @@ cam_params = load('cam_params.mat');
 %  imglistrgb = {'labpiv/rgb_image_1.png','labpiv/rgb_image_2.png','labpiv/rgb_image_3.png','labpiv/rgb_image_4.png','labpiv/rgb_image_5.png','labpiv/rgb_image_6.png'};
 %  imglistdepth = {'labpiv/depth_1.mat','labpiv/depth_2.mat','labpiv/depth_3.mat','labpiv/depth_4.mat','labpiv/depth_5.mat','labpiv/depth_6.mat'};
 
-%  imglistrgb = {'Datasets/room1/rgb_0000.jpg','Datasets/room1/rgb_0001.jpg','Datasets/room1/rgb_0002.jpg','Datasets/room1/rgb_0003.jpg','Datasets/room1/rgb_0004.jpg','Datasets/room1/rgb_0005.jpg','Datasets/room1/rgb_0006.jpg'};
-% imglistdepth = {'Datasets/room1/depth_0000.mat','Datasets/room1/depth_0001.mat','Datasets/room1/depth_0002.mat','Datasets/room1/depth_0003.mat','Datasets/room1/depth_0004.mat','Datasets/room1/depth_0005.mat','Datasets/room1/depth_0006.mat'};
+%  imglistrgb = {'Datasets/board1/rgb_0000.jpg','Datasets/board1/rgb_0001.jpg','Datasets/board1/rgb_0002.jpg','Datasets/board1/rgb_0003.jpg','Datasets/board1/rgb_0004.jpg','Datasets/board1/rgb_0005.jpg','Datasets/board1/rgb_0006.jpg','Datasets/board1/rgb_0007.jpg','Datasets/board1/rgb_0008.jpg','Datasets/board1/rgb_0009.jpg','Datasets/board1/rgb_0010.jpg','Datasets/board1/rgb_0011.jpg','Datasets/board1/rgb_0012.jpg','Datasets/board1/rgb_0013.jpg','Datasets/board1/rgb_0014.jpg'};
+% imglistdepth = {'Datasets/board1/depth_0000.mat','Datasets/board1/depth_0001.mat','Datasets/board1/depth_0002.mat','Datasets/board1/depth_0003.mat','Datasets/board1/depth_0004.mat','Datasets/board1/depth_0005.mat','Datasets/board1/depth_0006.mat','Datasets/board1/depth_0007.mat','Datasets/board1/depth_0008.mat','Datasets/board1/depth_0009.mat','Datasets/board1/depth_0010.mat','Datasets/board1/depth_0011.mat','Datasets/board1/depth_0012.mat','Datasets/board1/depth_0013.mat','Datasets/board1/depth_0014.mat'};
 
 imglistrgb = {'table/rgb_0000.jpg','table/rgb_0001.jpg','table/rgb_0002.jpg','table/rgb_0003.jpg','table/rgb_0004.jpg','table/rgb_0005.jpg','table/rgb_0006.jpg','table/rgb_0007.jpg'};
 imglistdepth = {'table/depth_0000.mat','table/depth_0001.mat','table/depth_0002.mat','table/depth_0003.mat','table/depth_0004.mat','table/depth_0005.mat','table/depth_0006.mat','table/depth_0007.mat'};
@@ -166,16 +166,16 @@ for i=1:num_images-1
     
     % Calculate the error
     dist_svd = dist_svd.^2;
-    error_svd = sqrt(sum(dist_svd,1));
+    error_svd = sqrt(sum(dist_svd,2));
 
     % Compare icp to svd
     [Points_Moved,M]=ICP_finite(inlier_xyz_1, xyz_1_features_hat);
-    pc_icp = pointCloud(Points_Moved);
+    pc_icp = pointCloud(xyz_1_features_hat);
     xyz_1_features_hat_pc = pctransform(pc_icp, affine3d(M'));
     xyz_1_features_hat = xyz_1_features_hat_pc.Location;
     dist_icp = inlier_xyz_1-xyz_1_features_hat;
-    error_icp = sqrt(sum(dist_icp.^2,1));
-    if error_icp<error_svd
+    error_icp = sqrt(sum(dist_icp.^2,2));
+    if sum(error_icp)<sum(error_svd)
         affines{i+1} = affine3d(M'*affines{i+1}.T);
     end
     
@@ -194,26 +194,26 @@ for i=num_images:-1:1
     end
 end
 
-%% Detect objects
-for i=1:1%num_images
-
-   [labeledImage, num_components] = detect_objects(images_vec{i});
-       
-   for j=1:num_components
-       
-       xyz_idx = find(labeledImage==j);
-              
-       xyz = pc_vec{i}.Location(xyz_idx,:);
-       
-       valid_inds = find(xyz(:,1)~=0);
-       
-       xyz = xyz(valid_inds,:);
-       xyz = pointCloud(xyz);
-       figure(i)
-       pcshow(xyz);
-       hold on;
-   end
-end
+% %% Detect objects
+% for i=1:1%num_images
+% 
+%    [labeledImage, num_components] = detect_objects(images_vec{i});
+%        
+%    for j=1:num_components
+%        
+%        xyz_idx = find(labeledImage==j);
+%               
+%        xyz = pc_vec{i}.Location(xyz_idx,:);
+%        
+%        valid_inds = find(xyz(:,1)~=0);
+%        
+%        xyz = xyz(valid_inds,:);
+%        xyz = pointCloud(xyz);
+%        figure(i)
+%        pcshow(xyz);
+%        hold on;
+%    end
+% end
 
 %%
 full_cloud = pc_vec{1};
@@ -221,7 +221,7 @@ pc_vec_transformed{1} = pc_vec{1};
 for i=2:num_images
     pc_1_hat = pctransform(pc_vec{i}, affines{i});
     pc_vec_transformed{i} = pc_1_hat;
-    full_cloud = pcmerge(full_cloud, pc_1_hat, 0.01);
+    full_cloud = pcmerge(full_cloud, pc_1_hat, 0.005);
 end
 
 pcshow(full_cloud);
