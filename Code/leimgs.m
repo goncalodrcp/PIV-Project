@@ -1,8 +1,8 @@
-d1=dir('Datasets/board1/*.mat');
-d2=dir('Datasets/board1/*.jpg');
+d1=dir('Datasets/labpiv/*.mat');
+d2=dir('Datasets/labpiv/*.png');
 for i=1:length(d1),
-    imglistdepth{i} = ['Datasets/board1/' d1(i).name];
-    imglistrgb{i} = ['Datasets/board1/' d2(i).name];
+    imglistdepth{i} = ['Datasets/labpiv/' d1(i).name];
+    imglistrgb{i} = ['Datasets/labpiv/' d2(i).name];
 end
 
 clear d1 d2 i
