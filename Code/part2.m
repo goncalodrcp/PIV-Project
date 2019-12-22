@@ -1,17 +1,4 @@
-clear
-
-run('F:\Users\User\Desktop\IST\PIV\sift\vlfeat-0.9.21\toolbox\vl_setup');
-
-cam_params = load('cam_params.mat');
-
-%  imglistrgb = {'labpiv/rgb_image_1.png','labpiv/rgb_image_2.png','labpiv/rgb_image_3.png','labpiv/rgb_image_4.png','labpiv/rgb_image_5.png','labpiv/rgb_image_6.png'};
-%  imglistdepth = {'labpiv/depth_1.mat','labpiv/depth_2.mat','labpiv/depth_3.mat','labpiv/depth_4.mat','labpiv/depth_5.mat','labpiv/depth_6.mat'};
-
- imglistrgb = {'Datasets/board1/rgb_0000.jpg','Datasets/board1/rgb_0001.jpg','Datasets/board1/rgb_0002.jpg','Datasets/board1/rgb_0003.jpg','Datasets/board1/rgb_0004.jpg','Datasets/board1/rgb_0005.jpg','Datasets/board1/rgb_0006.jpg','Datasets/board1/rgb_0007.jpg','Datasets/board1/rgb_0008.jpg','Datasets/board1/rgb_0009.jpg','Datasets/board1/rgb_0010.jpg','Datasets/board1/rgb_0011.jpg','Datasets/board1/rgb_0012.jpg','Datasets/board1/rgb_0013.jpg','Datasets/board1/rgb_0014.jpg'};
-imglistdepth = {'Datasets/board1/depth_0000.mat','Datasets/board1/depth_0001.mat','Datasets/board1/depth_0002.mat','Datasets/board1/depth_0003.mat','Datasets/board1/depth_0004.mat','Datasets/board1/depth_0005.mat','Datasets/board1/depth_0006.mat','Datasets/board1/depth_0007.mat','Datasets/board1/depth_0008.mat','Datasets/board1/depth_0009.mat','Datasets/board1/depth_0010.mat','Datasets/board1/depth_0011.mat','Datasets/board1/depth_0012.mat','Datasets/board1/depth_0013.mat','Datasets/board1/depth_0014.mat'};
-
-% imglistrgb = {'table/rgb_0000.jpg','table/rgb_0001.jpg','table/rgb_0002.jpg','table/rgb_0003.jpg','table/rgb_0004.jpg','table/rgb_0005.jpg','table/rgb_0006.jpg','table/rgb_0007.jpg'};
-% imglistdepth = {'table/depth_0000.mat','table/depth_0001.mat','table/depth_0002.mat','table/depth_0003.mat','table/depth_0004.mat','table/depth_0005.mat','table/depth_0006.mat','table/depth_0007.mat'};
+function [transforms, objects] = part2(imglistdepth, imglistrgb, cam_params)
 
 num_images=length(imglistrgb);
 
@@ -19,7 +6,14 @@ for i=1:num_images
     images_vec{i} = imread(imglistrgb{i});
     depth_vec{i} = load(imglistdepth{i});
 end
-%%
+
+% Intrinsic camera parameters
+depthK = cam_params.Kdepth;
+RGBK = cam_params.Krgb;
+R_d_to_rgb = cam_params.R;
+T_d_to_rgb = cam_params.T;
+
+% transform 1 to 1 is the identity
 affines{1} = affine3d(eye(4));
 
 for i=1:num_images-1
@@ -35,12 +29,7 @@ for i=1:num_images-1
     rgb_im1 = images_vec{i};
     rgb_im2 = images_vec{i+1};
     
-    % Intrinsic camera parameters
-    depthK = cam_params.Kdepth;
-    RGBK = cam_params.Krgb;
-    R_d_to_rgb = cam_params.R;
-    T_d_to_rgb = cam_params.T;
-    
+    % Check if there are NaN
     if  sum(sum(isnan(depth_im1))) >= 1
         flag_im1=1;
     end
@@ -55,7 +44,8 @@ for i=1:num_images-1
     depth_im1(find(depth_im1>3*mean(depth_im1(:))))=0;
     depth_im2(find(depth_im2>3*mean(depth_im2(:))))=0;
     
-    % get xyz from the depths and the images
+    % get xyz from the depths and the images, if there are NaN the depths
+    % are also in the wrong measurement unit -> multiply by 1000
     if flag_im1==0
         xyz_1 = get_xyzasus(depth_im1,[480 640],1:640*480,depthK,1,0);
     else 
@@ -80,20 +70,23 @@ for i=1:num_images-1
     
     [matches, weights] = vl_ubcmatch(d_im1, d_im2, match_threshold);
     
+    % If there are less than 4 matches keep trying with smaller threshold
     while size(matches,2) < 4
         match_threshold = match_threshold - 0.1;
         [matches, weights] = vl_ubcmatch(d_im1, d_im2, match_threshold);
     end
     
+    % Matched points
     p1 = F_im1(1:2, matches(1,:));
     p2 = F_im2(1:2, matches(2,:));
     
     p1=round(p1)';
     p2=round(p2)';
     
+    % Transform to xyz indices
     matches_1 =(p1(:,1)-1)*480+p1(:,2);
     matches_2 =(p2(:,1)-1)*480+p2(:,2);   
-    %%
+
     % get the xyz at the points corresponding to features
     xyz_1_features = xyz_1(matches_1, :);
     xyz_2_features = xyz_2(matches_2, :);  
@@ -177,7 +170,6 @@ for i=1:num_images-1
     error_icp = sqrt(sum(dist_icp.^2,2));
     if sum(error_icp)<sum(error_svd)
         affines{i+1} = affine3d(M'*affines{i+1}.T);
-        disp('lmaooo');
     end
     
 
@@ -188,20 +180,25 @@ for i=1:num_images-1
     clearvars matches;
     
 end
-%%
+% Compute all transforms on the frame of the 1st pcloud
 for i=num_images:-1:1
     for j=i-1:-1:1
         affines{i} = affine3d(affines{i}.T*affines{j}.T);
     end
 end
 
-%% Detect objects
+% Store the transformations in the correct format to be returned
+for i=1:num_images
+    affine_aux = affines{i}.T';
+    transforms{i}.R = affine_aux(1:3,1:3);
+    transforms{i}.T = affine_aux(1:3,4);
+end
+
+% Detect objects
 k=1;
 for i=1:num_images
 
-   [labeledImage] = detect_objects(images_vec{i});
-   
-   num_components = max(labeledImage(:));
+   [labeledImage, num_components] = detect_objects(images_vec{i});
    for j=1:num_components
        
        xyz_idx = find(labeledImage==j);
@@ -211,27 +208,19 @@ for i=1:num_images
        valid_inds = find(xyz(:,1)~=0);
        
        xyz = xyz(valid_inds,:);
+       
+       % Only accept objects with more than 50 connected points
        if size(xyz,1)>50
            xyz = pointCloud(xyz);
            objects{k}.framenum = i;
-           object_in_frame1 = pctransform(xyz, affines{i});
            
-           pcshow(object_in_frame1);
-           hold on;
+           object_in_frame1 = pctransform(xyz, affines{i});
 
            objects{k}.xyz = object_in_frame1.Location;
+           
            k = k+1;
        end
    end
 end
 
-% %
-% full_cloud = pc_vec{1};
-% pc_vec_transformed{1} = pc_vec{1};
-% for i=2:num_images
-%     pc_1_hat = pctransform(pc_vec{i}, affines{i});
-%     pc_vec_transformed{i} = pc_1_hat;
-%     full_cloud = pcmerge(full_cloud, pc_1_hat, 0.005);
-% end
-% 
-% pcshow(full_cloud);
+end

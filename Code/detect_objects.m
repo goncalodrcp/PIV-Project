@@ -1,18 +1,28 @@
-function [labeledImage, comps] = detect_objects(im)
-% Threshold the image to get a binary image (only 0's and 1's) of class "logical."
-% Method #1: using im2bw()
-%   normalizedThresholdValue = 0.4; % In range 0 to 1.
-%   thresholdValue = normalizedThresholdValue * max(max(originalImage)); % Gray Levels.
-%   binaryImage = im2bw(originalImage, normalizedThresholdValue);       % One way to threshold to binary
-% Method #2: using a logical operation.
-thresholdValue = 100;
-binaryImage = rgb2gray(im) > thresholdValue; % Bright objects will be chosen if you use >.
+function [L] = detect_objects(I)
+    I = rgb2gray(I);
 
-binaryImage = imfill(binaryImage, 'holes');
+    [~,threshold] = edge(I,'sobel');
 
-% bwlabel checks connected components
-[labeledImage, comps] = bwlabel(binaryImage, 8);  
+    fudgeFactor = 0.6;
+    BWs = edge(I,'sobel',threshold * fudgeFactor);
+ 
+    se90 = strel('line',3,90);
+    se0 = strel('line',3,0);
 
-boundaries = bwboundaries(binaryImage);
+    BWsdil = imdilate(BWs,[se90 se0]);
 
+    BWdfill = imfill(BWsdil,'holes');
+
+
+    seD = strel('diamond',2);
+    BWfinal = imerode(BWdfill,seD);
+    BWfinal = imerode(BWfinal,seD);
+    BWfinal = imerode(BWfinal,seD);
+  
+    BWnobord = imclearborder(BWfinal,4);
+   
+    L = bwlabel(BWnobord,8);
+    L = L.*bwareaopen(L, 70);
+ 
 end
+
