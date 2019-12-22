@@ -1,17 +1,10 @@
 clear
 
-run('F:\Users\User\Desktop\IST\PIV\sift\vlfeat-0.9.21\toolbox\vl_setup');
+run('/Users/goncalopereira/Documents/MATLAB/vlfeat-0.9.21/toolbox/vl_setup')
 
 cam_params = load('cam_params.mat');
 
-%  imglistrgb = {'labpiv/rgb_image_1.png','labpiv/rgb_image_2.png','labpiv/rgb_image_3.png','labpiv/rgb_image_4.png','labpiv/rgb_image_5.png','labpiv/rgb_image_6.png'};
-%  imglistdepth = {'labpiv/depth_1.mat','labpiv/depth_2.mat','labpiv/depth_3.mat','labpiv/depth_4.mat','labpiv/depth_5.mat','labpiv/depth_6.mat'};
-
- imglistrgb = {'Datasets/board1/rgb_0000.jpg','Datasets/board1/rgb_0001.jpg','Datasets/board1/rgb_0002.jpg','Datasets/board1/rgb_0003.jpg','Datasets/board1/rgb_0004.jpg','Datasets/board1/rgb_0005.jpg','Datasets/board1/rgb_0006.jpg','Datasets/board1/rgb_0007.jpg','Datasets/board1/rgb_0008.jpg','Datasets/board1/rgb_0009.jpg','Datasets/board1/rgb_0010.jpg','Datasets/board1/rgb_0011.jpg','Datasets/board1/rgb_0012.jpg','Datasets/board1/rgb_0013.jpg','Datasets/board1/rgb_0014.jpg'};
-imglistdepth = {'Datasets/board1/depth_0000.mat','Datasets/board1/depth_0001.mat','Datasets/board1/depth_0002.mat','Datasets/board1/depth_0003.mat','Datasets/board1/depth_0004.mat','Datasets/board1/depth_0005.mat','Datasets/board1/depth_0006.mat','Datasets/board1/depth_0007.mat','Datasets/board1/depth_0008.mat','Datasets/board1/depth_0009.mat','Datasets/board1/depth_0010.mat','Datasets/board1/depth_0011.mat','Datasets/board1/depth_0012.mat','Datasets/board1/depth_0013.mat','Datasets/board1/depth_0014.mat'};
-
-% imglistrgb = {'table/rgb_0000.jpg','table/rgb_0001.jpg','table/rgb_0002.jpg','table/rgb_0003.jpg','table/rgb_0004.jpg','table/rgb_0005.jpg','table/rgb_0006.jpg','table/rgb_0007.jpg'};
-% imglistdepth = {'table/depth_0000.mat','table/depth_0001.mat','table/depth_0002.mat','table/depth_0003.mat','table/depth_0004.mat','table/depth_0005.mat','table/depth_0006.mat','table/depth_0007.mat'};
+leimgs;
 
 num_images=length(imglistrgb);
 
@@ -76,7 +69,7 @@ for i=1:num_images-1
     [F_im2 d_im2]= vl_sift(single(rgb2gray(rgbd_im2)), 'PeakThresh', 0, 'edgethresh', 10);
     
     % Match sift features
-    match_threshold = 2.5;
+    match_threshold = 1.5; %2.5
     
     [matches, weights] = vl_ubcmatch(d_im1, d_im2, match_threshold);
     
@@ -114,7 +107,7 @@ for i=1:num_images-1
     xyz_2_features = xyz(:,4:6);
     
     % get the indices of the inliers in the set of features with ransac
-    e = 0.025;
+    e = 0.025; %0.025
     [inliers, error, no_inliers] = ransac_function(xyz_1_features, xyz_2_features, e);
     
     while no_inliers == 1
@@ -177,7 +170,7 @@ for i=1:num_images-1
     error_icp = sqrt(sum(dist_icp.^2,2));
     if sum(error_icp)<sum(error_svd)
         affines{i+1} = affine3d(M'*affines{i+1}.T);
-        disp('lmaooo');
+        %disp('lmaooo');
     end
     
 
@@ -196,42 +189,42 @@ for i=num_images:-1:1
 end
 
 %% Detect objects
-k=1;
-for i=1:num_images
+% k=1;
+% for i=1:num_images
+% 
+%    [labeledImage] = detect_objects(images_vec{i});
+%    
+%    num_components = max(labeledImage(:));
+%    for j=1:num_components
+%        
+%        xyz_idx = find(labeledImage==j);
+%               
+%        xyz = pc_vec{i}.Location(xyz_idx,:);
+%        
+%        valid_inds = find(xyz(:,1)~=0);
+%        
+%        xyz = xyz(valid_inds,:);
+%        if size(xyz,1)>50
+%            xyz = pointCloud(xyz);
+%            objects{k}.framenum = i;
+%            object_in_frame1 = pctransform(xyz, affines{i});
+%            
+%            pcshow(object_in_frame1);
+%            hold on;
+% 
+%            objects{k}.xyz = object_in_frame1.Location;
+%            k = k+1;
+%        end
+%    end
+% end
 
-   [labeledImage] = detect_objects(images_vec{i});
-   
-   num_components = max(labeledImage(:));
-   for j=1:num_components
-       
-       xyz_idx = find(labeledImage==j);
-              
-       xyz = pc_vec{i}.Location(xyz_idx,:);
-       
-       valid_inds = find(xyz(:,1)~=0);
-       
-       xyz = xyz(valid_inds,:);
-       if size(xyz,1)>50
-           xyz = pointCloud(xyz);
-           objects{k}.framenum = i;
-           object_in_frame1 = pctransform(xyz, affines{i});
-           
-           pcshow(object_in_frame1);
-           hold on;
 
-           objects{k}.xyz = object_in_frame1.Location;
-           k = k+1;
-       end
-   end
+full_cloud = pc_vec{1};
+pc_vec_transformed{1} = pc_vec{1};
+for i=2:num_images
+    pc_1_hat = pctransform(pc_vec{i}, affines{i});
+    pc_vec_transformed{i} = pc_1_hat;
+    full_cloud = pcmerge(full_cloud, pc_1_hat, 0.005);
 end
 
-% %
-% full_cloud = pc_vec{1};
-% pc_vec_transformed{1} = pc_vec{1};
-% for i=2:num_images
-%     pc_1_hat = pctransform(pc_vec{i}, affines{i});
-%     pc_vec_transformed{i} = pc_1_hat;
-%     full_cloud = pcmerge(full_cloud, pc_1_hat, 0.005);
-% end
-% 
-% pcshow(full_cloud);
+pcshow(full_cloud);
